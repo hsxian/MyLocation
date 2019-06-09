@@ -1,12 +1,14 @@
 package com.myloaction.services
 
-import android.content.Context
+import android.annotation.SuppressLint
 import android.icu.text.SimpleDateFormat
 import android.location.Location
 import android.os.Build
 import android.os.Environment
 import androidx.annotation.RequiresApi
+import com.example.mylocation.MainActivity
 import com.google.gson.Gson
+import kotlinx.android.synthetic.main.content_main.*
 import java.io.File
 import java.util.*
 
@@ -18,7 +20,7 @@ class LocationGatherers private constructor() {
         }
     }
 
-    lateinit var mainContext: Context
+    lateinit var mainActivity: MainActivity
     private var timer: Timer? = null
     private var mTimerTask: TimerTask? = null
     private var fileDir = Environment.getExternalStorageDirectory().absolutePath + "/locations"
@@ -34,6 +36,8 @@ class LocationGatherers private constructor() {
         initTimerTask()
         timer = Timer()
         timer?.schedule(mTimerTask, 0, 1000)
+        LocationUtil.listenerGpsProvider(mainActivity)
+        LocationUtil.listenerNetProvider(mainActivity)
 
     }
 
@@ -45,11 +49,12 @@ class LocationGatherers private constructor() {
 
         mTimerTask?.cancel()
         mTimerTask = null
-
+        LocationUtil.stopListenerGpsProvider(mainActivity)
+        LocationUtil.stopListenerNetProvider(mainActivity)
     }
 
     private fun equalsLocation(l1: Location, l2: Location): Boolean {
-        if (l1 == null || l2 == null) return false
+        if (l1 == null || l2 == null) return true
 
         if (l1.longitude == l2.longitude
             && l1.latitude == l2.latitude
@@ -70,15 +75,30 @@ class LocationGatherers private constructor() {
 
     private fun initTimerTask() {
         mTimerTask = object : TimerTask() {
+            @SuppressLint("SetTextI18n")
             @RequiresApi(Build.VERSION_CODES.O)
             override fun run() {
-                val lc = LocationUtil.getLocation(mainContext) as Location
-                var str = Gson().toJson(lc) + ",\n"
-                if (lastLocation == null || !equalsLocation(lc, lastLocation as Location)) {
-                    checkFile()
-                    fileOfData.appendText(str)
+                try {
+                    if (!LocationUtil.isOPen(mainActivity)) return
+                    var lc: Location = LocationUtil.myLocation ?: return
+                    mainActivity.runOnUiThread {
+                        mainActivity.textView.text =
+                            "time:${Date()}\n" +
+                                    "longitude:${lc.longitude}\n" +
+                                    "latitude:${lc.latitude}\n" +
+                                    "altitude:${lc.altitude}\n" +
+                                    "speed:${lc.speedAccuracyMetersPerSecond}m/s\n"+
+                                    "provider:${lc.provider}"
+                    }
+                    var str = Gson().toJson(lc) + ",\n"
+                    if (lastLocation == null || !equalsLocation(lc, lastLocation as Location)) {
+                        checkFile()
+                        fileOfData.appendText(str)
+                    }
+                    lastLocation = lc
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-                lastLocation = lc
             }
         }
     }

@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
                 .setAction("Action", null).show()
         }
 
-        LocationGatherers.instance.mainContext = this
+        LocationGatherers.instance.mainActivity = this
         start.setOnClickListener {
 
             if (checkLocationPermissionGranted() && checkStoragePermissionGranted()) {
