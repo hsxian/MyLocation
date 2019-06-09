@@ -1,6 +1,7 @@
 package com.myloaction.services
 
 import android.content.Context
+import android.icu.text.SimpleDateFormat
 import android.location.Location
 import android.os.Build
 import android.os.Environment
@@ -21,17 +22,18 @@ class LocationGatherers private constructor() {
     private var timer: Timer? = null
     private var mTimerTask: TimerTask? = null
     private var fileDir = Environment.getExternalStorageDirectory().absolutePath + "/locations"
-    private var filename = "$fileDir/data.json"
-    private var fileOfData: File = File(filename)
+    private var filename = ""
+    private lateinit var fileOfData: File
     private var lastLocation: Location? = null
+    @RequiresApi(Build.VERSION_CODES.N)
+    var outputsdf: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd")
 
 
     fun start() {
         if (timer != null) return
-        csvTableHead()
         initTimerTask()
         timer = Timer()
-        timer?.schedule(mTimerTask, 0, 6000)
+        timer?.schedule(mTimerTask, 0, 1000)
 
     }
 
@@ -46,13 +48,6 @@ class LocationGatherers private constructor() {
 
     }
 
-    fun csvTableHead() {
-        var file = File(fileDir)
-        if (!file.exists()) {
-            file.mkdir()
-        }
-    }
-
     private fun equalsLocation(l1: Location, l2: Location): Boolean {
         if (l1 == null || l2 == null) return false
 
@@ -64,15 +59,25 @@ class LocationGatherers private constructor() {
         return false
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
+    private fun checkFile() {
+        var name = "${outputsdf.format(Date())}.data.json"
+        if (filename.isNullOrBlank() || filename != name) {
+            fileOfData = File("$fileDir/$name")
+            filename = name
+        }
+    }
+
     private fun initTimerTask() {
         mTimerTask = object : TimerTask() {
             @RequiresApi(Build.VERSION_CODES.O)
             override fun run() {
                 val lc = LocationUtil.getLocation(mainContext) as Location
                 var str = Gson().toJson(lc) + ",\n"
-
-                if (lastLocation == null || !equalsLocation(lc, lastLocation as Location))
+                if (lastLocation == null || !equalsLocation(lc, lastLocation as Location)) {
+                    checkFile()
                     fileOfData.appendText(str)
+                }
                 lastLocation = lc
             }
         }
