@@ -32,12 +32,14 @@ class MainActivity : AppCompatActivity() {
 
             if (checkLocationPermissionGranted() && checkStoragePermissionGranted()) {
                 LocationGatherers.instance.start()
+                textView.text="Location collection service is running in the background..."
             } else {
                 alertPermissionGranted()
             }
         }
         stop.setOnClickListener {
             LocationGatherers.instance.stop()
+            textView.text="The location acquisition service has been stopped."
         }
     }
 
