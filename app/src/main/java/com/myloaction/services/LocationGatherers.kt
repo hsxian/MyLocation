@@ -19,8 +19,6 @@ class LocationGatherers private constructor() {
             LocationGatherers()
         }
     }
-
-    lateinit var mainActivity: MainActivity
     private var timer: Timer? = null
     private var mTimerTask: TimerTask? = null
     private var fileDir = Environment.getExternalStorageDirectory().absolutePath + "/locations"
@@ -29,6 +27,8 @@ class LocationGatherers private constructor() {
     private var lastLocation: Location? = null
     @RequiresApi(Build.VERSION_CODES.N)
     var outputsdf: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd")
+    @RequiresApi(Build.VERSION_CODES.N)
+    var dateTimesdf: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
 
     fun start() {
@@ -36,8 +36,7 @@ class LocationGatherers private constructor() {
         initTimerTask()
         timer = Timer()
         timer?.schedule(mTimerTask, 0, 1000)
-        LocationUtil.listenerGpsProvider(mainActivity)
-        LocationUtil.listenerNetProvider(mainActivity)
+        LocationUtil.startListenerLocation(MainActivity.instance)
 
     }
 
@@ -49,8 +48,7 @@ class LocationGatherers private constructor() {
 
         mTimerTask?.cancel()
         mTimerTask = null
-        LocationUtil.stopListenerGpsProvider(mainActivity)
-        LocationUtil.stopListenerNetProvider(mainActivity)
+        LocationUtil.stopListenerLocation(MainActivity.instance)
     }
 
     private fun equalsLocation(l1: Location, l2: Location): Boolean {
@@ -66,7 +64,7 @@ class LocationGatherers private constructor() {
 
     @RequiresApi(Build.VERSION_CODES.N)
     private fun checkFile() {
-        var name = "${outputsdf.format(Date())}.data.json"
+        var name = "${outputsdf.format(Date())}.data.csv"
         if (filename.isNullOrBlank() || filename != name) {
             fileOfData = File("$fileDir/$name")
             filename = name
@@ -79,18 +77,28 @@ class LocationGatherers private constructor() {
             @RequiresApi(Build.VERSION_CODES.O)
             override fun run() {
                 try {
-                    if (!LocationUtil.isOPen(mainActivity)) return
-                    var lc: Location = LocationUtil.myLocation ?: return
-                    mainActivity.runOnUiThread {
-                        mainActivity.textView.text =
-                            "time:${Date()}\n" +
-                                    "longitude:${lc.longitude}\n" +
-                                    "latitude:${lc.latitude}\n" +
-                                    "altitude:${lc.altitude}\n" +
-                                    "speed:${lc.speedAccuracyMetersPerSecond}m/s\n"+
+                    if (!LocationUtil.isOPen(MainActivity.instance)) return
+                    var lc: Location = LocationUtil.bestLocation ?: return
+                    MainActivity.instance.runOnUiThread {
+                        MainActivity.instance.textView.text =
+                            "time:${dateTimesdf.format(lc.time)}\n" +
+                                    "lon:${lc.longitude}\n" +
+                                    "lat:${lc.latitude}\n" +
+                                    "alt:${lc.altitude}\n" +
+                                    "bear:${lc.bearing}\n" +
+                                    "speed:${lc.speed}m/s\n"+
+                                    "acc:${lc.accuracy}\n"+
                                     "provider:${lc.provider}"
                     }
-                    var str = Gson().toJson(lc) + ",\n"
+//                    var str = Gson().toJson(lc) + ",\n"
+                    var str = "${dateTimesdf.format(lc.time)}," +
+                            "${lc.longitude}," +
+                            "${lc.latitude}," +
+                            "${lc.altitude}," +
+                            "${lc.bearing}," +
+                            "${lc.speed},"+
+                            "${lc.accuracy}," +
+                            "${lc.provider}\n"
                     if (lastLocation == null || !equalsLocation(lc, lastLocation as Location)) {
                         checkFile()
                         fileOfData.appendText(str)

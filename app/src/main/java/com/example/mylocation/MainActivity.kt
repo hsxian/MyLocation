@@ -3,10 +3,12 @@ package com.example.mylocation
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Menu
 import android.view.MenuItem
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.PermissionChecker
@@ -16,7 +18,11 @@ import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        lateinit var instance: MainActivity
+    }
 
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -27,20 +33,21 @@ class MainActivity : AppCompatActivity() {
                 .setAction("Action", null).show()
         }
 
-        LocationGatherers.instance.mainActivity = this
         start.setOnClickListener {
 
             if (checkLocationPermissionGranted() && checkStoragePermissionGranted()) {
                 LocationGatherers.instance.start()
-                textView.text="Location collection service is running in the background..."
+                textView.text = "Location collection service is running in the background..."
             } else {
                 alertPermissionGranted()
             }
         }
         stop.setOnClickListener {
             LocationGatherers.instance.stop()
-            textView.text="The location acquisition service has been stopped."
+            textView.text = "The location acquisition service has been stopped."
         }
+
+        instance = this
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

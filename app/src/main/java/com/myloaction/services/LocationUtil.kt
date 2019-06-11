@@ -7,9 +7,15 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.location.LocationManager.*
 import android.os.Bundle
+import com.example.mylocation.MainActivity
+import kotlinx.android.synthetic.main.content_main.*
+import java.util.*
 
 object LocationUtil {
-    var myLocation: Location? = null
+
+    private var gpsLocation: Location? = null
+    private var netLocation: Location? = null
+    var bestLocation: Location? = null
     /**
      * 获取经纬度
      *
@@ -20,50 +26,55 @@ object LocationUtil {
     fun getLocation(context: Context): Location? {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
         var providers = locationManager.allProviders
-        providers.clear()
-        providers.add(GPS_PROVIDER)
-        providers.add(NETWORK_PROVIDER)
-        providers.add(PASSIVE_PROVIDER)
         for (provider in providers) {
             val location = locationManager.getLastKnownLocation(provider)
             if (location != null) {
                 return location
             }
         }
-
-        val location = locationManager.getLastKnownLocation(GPS_PROVIDER)
-        if (location != null) {
-            return location
-        }
         return null
     }
 
     @SuppressLint("MissingPermission")
-    fun listenerGpsProvider(context: Context) {
+    fun startListenerLocation(context: Context) {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        locationManager.requestLocationUpdates(GPS_PROVIDER, 1000, 1F, gpsLocationListener)
-    }
-    fun stopListenerGpsProvider(context: Context) {
-        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        locationManager.removeUpdates(gpsLocationListener)
-    }
-
-    @SuppressLint("MissingPermission")
-    fun listenerNetProvider(context: Context) {
-        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        locationManager.requestLocationUpdates(NETWORK_PROVIDER, 1000, 0F, networkListener)
-    }
-    fun stopListenerNetProvider(context: Context) {
-        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        locationManager.removeUpdates(networkListener)
+//        val cr = Criteria()
+//        cr.accuracy = Criteria.ACCURACY_FINE
+//        cr.isAltitudeRequired = true
+//        cr.isBearingRequired = true
+//        cr.isCostAllowed = false
+//        cr.powerRequirement = Criteria.POWER_LOW
+//        var bestProvider = locationManager.getBestProvider(cr, true)
+        locationManager.requestLocationUpdates(GPS_PROVIDER, 1000, 10F, gpsListener)
+        locationManager.requestLocationUpdates(NETWORK_PROVIDER, 1000, 0F, netListener)
     }
 
+    fun stopListenerLocation(context: Context) {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        locationManager.removeUpdates(gpsListener)
+        locationManager.removeUpdates(netListener)
+    }
 
-    var gpsLocationListener: LocationListener = object : LocationListener {
+    fun isNearNowTime(time: Date): Boolean {
+        var before = GregorianCalendar()
+        before.time = time
+        before.add(Calendar.MINUTE, -1)
+        var after = GregorianCalendar()
+        after.time = time
+        after.add(Calendar.MINUTE, 1)
+
+        if (before.time < Date() && Date() < after.time) {
+            return true
+        }
+        return false
+    }
+
+    var gpsListener: LocationListener = object : LocationListener {
 
         override fun onLocationChanged(location: Location) {
-            if (location != null) {
-                myLocation = location
+            if (location != null && isNearNowTime(Date(location.time))) {
+                gpsLocation = location
+                bestLocation = gpsLocation
             }
         }
 
@@ -75,24 +86,26 @@ object LocationUtil {
 
         }
     }
-    var networkListener: LocationListener = object : LocationListener {
+    var netListener: LocationListener = object : LocationListener {
 
         override fun onLocationChanged(location: Location) {
-            if (location != null) {
-                myLocation = location
+            if (location != null && isNearNowTime(Date(location.time))) {
+                netLocation = location
+                if (gpsLocation == null || !isNearNowTime(Date(gpsLocation?.time ?: 0))) {
+                    bestLocation = netLocation
+                }
             }
-
         }
+
+        override fun onProviderDisabled(provider: String) {}
+
+        override fun onProviderEnabled(provider: String) {}
 
         override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {
 
         }
-
-        override fun onProviderEnabled(provider: String) {}
-
-        override fun onProviderDisabled(provider: String) {}
-
     }
+
 
     /**
      * 判断GPS是否开启，GPS或者AGPS开启一个就认为是开启的
