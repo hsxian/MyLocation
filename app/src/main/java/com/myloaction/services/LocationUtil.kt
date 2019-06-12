@@ -5,16 +5,16 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.location.LocationManager.*
+import android.location.LocationManager.GPS_PROVIDER
+import android.location.LocationManager.NETWORK_PROVIDER
 import android.os.Bundle
-import com.example.mylocation.MainActivity
-import kotlinx.android.synthetic.main.content_main.*
-import java.util.*
+import android.os.SystemClock
+
 
 object LocationUtil {
 
-    private var gpsLocation: Location? = null
-    private var netLocation: Location? = null
+    private var isGPSFix: Boolean = false
+    private var mLastLocationMillis: Long = 0
     var bestLocation: Location? = null
     /**
      * 获取经纬度
@@ -38,15 +38,8 @@ object LocationUtil {
     @SuppressLint("MissingPermission")
     fun startListenerLocation(context: Context) {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-//        val cr = Criteria()
-//        cr.accuracy = Criteria.ACCURACY_FINE
-//        cr.isAltitudeRequired = true
-//        cr.isBearingRequired = true
-//        cr.isCostAllowed = false
-//        cr.powerRequirement = Criteria.POWER_LOW
-//        var bestProvider = locationManager.getBestProvider(cr, true)
-        locationManager.requestLocationUpdates(GPS_PROVIDER, 1000, 10F, gpsListener)
-        locationManager.requestLocationUpdates(NETWORK_PROVIDER, 1000, 0F, netListener)
+        locationManager.requestLocationUpdates(GPS_PROVIDER, 1000, 1F, gpsListener)
+        locationManager.requestLocationUpdates(NETWORK_PROVIDER, 3000, 0F, netListener)
     }
 
     fun stopListenerLocation(context: Context) {
@@ -55,27 +48,21 @@ object LocationUtil {
         locationManager.removeUpdates(netListener)
     }
 
-    fun isNearNowTime(time: Date): Boolean {
-        var before = GregorianCalendar()
-        before.time = time
-        before.add(Calendar.MINUTE, -1)
-        var after = GregorianCalendar()
-        after.time = time
-        after.add(Calendar.MINUTE, 1)
-
-        if (before.time < Date() && Date() < after.time) {
+    fun isNearNowTime(timeMillis: Long): Boolean {
+        var before = System.currentTimeMillis() - 10000
+        var after = System.currentTimeMillis() + 10000
+        if (timeMillis in before until after) {
             return true
         }
         return false
     }
 
-    var gpsListener: LocationListener = object : LocationListener {
+    private var gpsListener: LocationListener = object : LocationListener {
 
         override fun onLocationChanged(location: Location) {
-            if (location != null && isNearNowTime(Date(location.time))) {
-                gpsLocation = location
-                bestLocation = gpsLocation
-            }
+            if (location == null) return
+            mLastLocationMillis = SystemClock.elapsedRealtime()
+            bestLocation = location
         }
 
         override fun onProviderDisabled(provider: String) {}
@@ -83,18 +70,14 @@ object LocationUtil {
         override fun onProviderEnabled(provider: String) {}
 
         override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {
-
         }
     }
-    var netListener: LocationListener = object : LocationListener {
-
+    private var netListener: LocationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
-            if (location != null && isNearNowTime(Date(location.time))) {
-                netLocation = location
-                if (gpsLocation == null || !isNearNowTime(Date(gpsLocation?.time ?: 0))) {
-                    bestLocation = netLocation
-                }
-            }
+            if (location == null) return
+            isGPSFix = (SystemClock.elapsedRealtime() - mLastLocationMillis) < 3000
+            if (isGPSFix) return
+            bestLocation = location
         }
 
         override fun onProviderDisabled(provider: String) {}

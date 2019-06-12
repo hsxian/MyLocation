@@ -79,9 +79,11 @@ class LocationGatherers private constructor() {
                 try {
                     if (!LocationUtil.isOPen(MainActivity.instance)) return
                     var lc: Location = LocationUtil.bestLocation ?: return
+                    if(outputsdf.format(System.currentTimeMillis()) != outputsdf.format(lc.time))return
                     MainActivity.instance.runOnUiThread {
                         MainActivity.instance.textView.text =
-                            "time:${dateTimesdf.format(lc.time)}\n" +
+                            "now:${dateTimesdf.format(System.currentTimeMillis())}\n" +
+                                    "time:${dateTimesdf.format(lc.time)}\n" +
                                     "lon:${lc.longitude}\n" +
                                     "lat:${lc.latitude}\n" +
                                     "alt:${lc.altitude}\n" +
