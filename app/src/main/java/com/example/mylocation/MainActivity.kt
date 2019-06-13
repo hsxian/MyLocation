@@ -1,11 +1,14 @@
 package com.example.mylocation
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import androidx.annotation.RequiresApi
@@ -22,11 +25,20 @@ class MainActivity : AppCompatActivity() {
         lateinit var instance: MainActivity
     }
 
+    private lateinit var wakeLock: PowerManager.WakeLock
+
+    @SuppressLint("InvalidWakeLockTag")
+    private fun wakeLockInit() {
+        var powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyTag")
+    }
+
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+        wakeLockInit()
 
         fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
@@ -36,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         start.setOnClickListener {
 
             if (checkLocationPermissionGranted() && checkStoragePermissionGranted()) {
+                wakeLock.acquire()
                 LocationGatherers.instance.start()
                 textView.text = "Location collection service is running in the background..."
             } else {
@@ -43,11 +56,29 @@ class MainActivity : AppCompatActivity() {
             }
         }
         stop.setOnClickListener {
+            if (wakeLock.isHeld)
+                wakeLock.release()
             LocationGatherers.instance.stop()
             textView.text = "The location acquisition service has been stopped."
         }
 
         instance = this
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_BACK && event?.repeatCount == 0 && wakeLock.isHeld) {
+            // 最小化应用
+
+//            val intent = Intent(Intent.ACTION_MAIN)
+//
+//            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+//
+//            intent.addCategory(Intent.CATEGORY_HOME)
+//
+//            startActivity(intent)
+            moveTaskToBack(true)
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

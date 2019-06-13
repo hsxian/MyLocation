@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Environment
 import androidx.annotation.RequiresApi
 import com.example.mylocation.MainActivity
-import com.google.gson.Gson
 import kotlinx.android.synthetic.main.content_main.*
 import java.io.File
 import java.util.*
@@ -19,6 +18,7 @@ class LocationGatherers private constructor() {
             LocationGatherers()
         }
     }
+
     private var timer: Timer? = null
     private var mTimerTask: TimerTask? = null
     private var fileDir = Environment.getExternalStorageDirectory().absolutePath + "/locations"
@@ -28,7 +28,7 @@ class LocationGatherers private constructor() {
     @RequiresApi(Build.VERSION_CODES.N)
     var outputsdf: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd")
     @RequiresApi(Build.VERSION_CODES.N)
-    var dateTimesdf: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    var dateTimeSdf: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
 
     fun start() {
@@ -79,28 +79,31 @@ class LocationGatherers private constructor() {
                 try {
                     if (!LocationUtil.isOPen(MainActivity.instance)) return
                     var lc: Location = LocationUtil.bestLocation ?: return
-                    if(outputsdf.format(System.currentTimeMillis()) != outputsdf.format(lc.time))return
+                    if (outputsdf.format(System.currentTimeMillis()) != outputsdf.format(lc.time)) return
                     MainActivity.instance.runOnUiThread {
                         MainActivity.instance.textView.text =
-                            "now:${dateTimesdf.format(System.currentTimeMillis())}\n" +
-                                    "time:${dateTimesdf.format(lc.time)}\n" +
+                            "now:${dateTimeSdf.format(System.currentTimeMillis())}\n" +
+                                    "time:${dateTimeSdf.format(lc.time)}\n" +
                                     "lon:${lc.longitude}\n" +
                                     "lat:${lc.latitude}\n" +
                                     "alt:${lc.altitude}\n" +
                                     "bear:${lc.bearing}\n" +
-                                    "speed:${lc.speed}m/s\n"+
-                                    "acc:${lc.accuracy}\n"+
+                                    "speed:${lc.speed}m/s\t${lc.speed * 3.6}km/h\n" +
+                                    "acc:${lc.accuracy}\n" +
                                     "provider:${lc.provider}"
                     }
 //                    var str = Gson().toJson(lc) + ",\n"
-                    var str = "${dateTimesdf.format(lc.time)}," +
+                    var str = "${dateTimeSdf.format(lc.time)}," +
                             "${lc.longitude}," +
                             "${lc.latitude}," +
                             "${lc.altitude}," +
                             "${lc.bearing}," +
-                            "${lc.speed},"+
+                            "${lc.speed}," +
                             "${lc.accuracy}," +
                             "${lc.provider}\n"
+                    with(File("$fileDir/heat_beat.log")) {
+                        writeText("${dateTimeSdf.format(System.currentTimeMillis())}")
+                    }
                     if (lastLocation == null || !equalsLocation(lc, lastLocation as Location)) {
                         checkFile()
                         fileOfData.appendText(str)
