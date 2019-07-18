@@ -83,7 +83,6 @@ class LocationGatherers private constructor() {
                     MainActivity.instance.runOnUiThread {
                         MainActivity.instance.textView.text =
                             "now:${dateTimeSdf.format(System.currentTimeMillis())}\n" +
-                                    "time:${dateTimeSdf.format(lc.time)}\n" +
                                     "lon:${lc.longitude}\n" +
                                     "lat:${lc.latitude}\n" +
                                     "alt:${lc.altitude}\n" +
@@ -92,8 +91,8 @@ class LocationGatherers private constructor() {
                                     "acc:${lc.accuracy}\n" +
                                     "provider:${lc.provider}"
                     }
-//                    var str = Gson().toJson(lc) + ",\n"
-                    var str = "${dateTimeSdf.format(lc.time)}," +
+
+                    var str = "${dateTimeSdf.format(System.currentTimeMillis())}," +
                             "${lc.longitude}," +
                             "${lc.latitude}," +
                             "${lc.altitude}," +
@@ -101,9 +100,7 @@ class LocationGatherers private constructor() {
                             "${lc.speed}," +
                             "${lc.accuracy}," +
                             "${lc.provider}\n"
-                    with(File("$fileDir/heat_beat.log")) {
-                        writeText("${dateTimeSdf.format(System.currentTimeMillis())}")
-                    }
+
                     if (lastLocation == null || !equalsLocation(lc, lastLocation as Location)) {
                         checkFile()
                         fileOfData.appendText(str)

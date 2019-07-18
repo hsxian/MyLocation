@@ -38,7 +38,7 @@ object LocationUtil {
     @SuppressLint("MissingPermission")
     fun startListenerLocation(context: Context) {
         val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        locationManager.requestLocationUpdates(GPS_PROVIDER, 1000, 1F, gpsListener)
+        locationManager.requestLocationUpdates(GPS_PROVIDER, 1000, 10F, gpsListener)
         locationManager.requestLocationUpdates(NETWORK_PROVIDER, 3000, 0F, netListener)
     }
 
